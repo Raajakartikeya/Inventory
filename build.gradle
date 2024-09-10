@@ -1,0 +1,70 @@
+plugins {
+    id 'java'
+    id 'war'
+}
+
+group = 'com.example'
+version = '1.0-SNAPSHOT'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation 'jakarta.platform:jakarta.jakartaee-api:10.0.0'
+    testImplementation platform('org.junit:junit-bom:5.10.0')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    // https://mvnrepository.com/artifact/jakarta.servlet/jakarta.servlet-api
+    compileOnly group: 'jakarta.servlet', name: 'jakarta.servlet-api', version: '6.1.0'
+    // https://mvnrepository.com/artifact/com.google.code.gson/gson
+    implementation group: 'com.google.code.gson', name: 'gson', version: '2.11.0'
+    // https://mvnrepository.com/artifact/mysql/mysql-connector-java
+    implementation group: 'mysql', name: 'mysql-connector-java', version: '8.0.33'
+
+}
+
+test {
+    useJUnitPlatform()
+}
+war {
+    archiveFileName = 'inventory.war' // Set your desired WAR file name
+}
+
+
+def tomcatHome = '/Users/raaja-tt0462/Documents/Lib/apache-tomcat-10.1.28'
+def webappsDir = "${tomcatHome}/webapps"
+
+task copyWar(type: Copy) {
+    dependsOn war
+    from war.archiveFile  // Use Gradle's archiveFile property to refer to the generated WAR
+    into webappsDir
+}
+
+// Task to stop Tomcat
+task stopTomcat(type: Exec) {
+    doFirst {
+        println 'Stopping Tomcat...'
+    }
+    commandLine "${tomcatHome}/bin/shutdown.sh"
+    ignoreExitValue = true // Ignore errors if Tomcat is already stopped
+}
+
+// Task to start Tomcat
+task startTomcat(type: Exec) {
+    doFirst {
+        println 'Starting Tomcat... '
+    }
+    commandLine "${tomcatHome}/bin/startup.sh"
+}
+
+// Task to restart Tomcat, including copying the WAR file
+task restartTomcat {
+    dependsOn stopTomcat, copyWar
+    finalizedBy startTomcat
+}
+
+// Combined task for full automation of build, deploy, and restart
+task deploy {
+    dependsOn restartTomcat
+}
+
